@@ -85,9 +85,17 @@
 
     <!-- 하단 툴바 -->
     <footer class="memo-toolbar">
-      <button class="toolbar-btn" id="btn-text" aria-label="텍스트">
-        <span>가</span>
-      </button>
+      <div class="toolbar-btn-wrapper">
+        <button class="toolbar-btn" id="btn-text" aria-label="텍스트">
+          <span>가</span>
+        </button>
+        <!-- 텍스트 크기 팝업 메뉴 -->
+        <div class="popup-menu" id="text-size-popup">
+          <button class="popup-item" data-size="small">작게</button>
+          <button class="popup-item" data-size="medium">보통</button>
+          <button class="popup-item" data-size="large">크게</button>
+        </div>
+      </div>
       <button class="toolbar-btn" id="btn-checklist" aria-label="체크리스트">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 11l3 3L22 4"></path>

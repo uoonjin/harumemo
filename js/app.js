@@ -8,6 +8,7 @@
    상수
    ======================================== */
 const STORAGE_KEY = 'harumemo_data';
+const TEXT_SIZE_KEY = 'harumemo_textsize';
 
 /* ========================================
    전역 변수
@@ -21,6 +22,9 @@ let selectedDate = null;
 
 // 메모 데이터 (메모리)
 let memos = {};
+
+// 현재 텍스트 크기 (small, medium, large)
+let currentTextSize = 'medium';
 
 /* ========================================
    DOM 요소
@@ -36,6 +40,11 @@ const btnNewMemo = document.getElementById('btn-new-memo');
 const btnBack = document.getElementById('btn-back');
 const btnSave = document.getElementById('btn-save');
 const btnClose = document.getElementById('btn-close');
+
+// 툴바 버튼
+const btnText = document.getElementById('btn-text');
+const btnChecklist = document.getElementById('btn-checklist');
+const textSizePopup = document.getElementById('text-size-popup');
 
 /* ========================================
    LocalStorage 함수
@@ -246,6 +255,133 @@ function initEventListeners() {
     }
     showMainScreen();
   });
+
+  // 텍스트 크기 버튼
+  if (btnText) {
+    btnText.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTextSizePopup();
+    });
+  }
+
+  // 텍스트 크기 팝업 아이템 클릭
+  if (textSizePopup) {
+    textSizePopup.querySelectorAll('.popup-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const size = item.dataset.size;
+        setTextSize(size);
+        closeTextSizePopup();
+      });
+    });
+  }
+
+  // 체크리스트 버튼
+  if (btnChecklist) {
+    btnChecklist.addEventListener('click', () => {
+      insertChecklist();
+    });
+  }
+
+  // 팝업 외부 클릭 시 닫기
+  document.addEventListener('click', (e) => {
+    if (textSizePopup && btnText && !textSizePopup.contains(e.target) && e.target !== btnText) {
+      closeTextSizePopup();
+    }
+  });
+}
+
+/* ========================================
+   텍스트 크기 조절 함수
+   ======================================== */
+
+// 텍스트 크기 팝업 토글
+function toggleTextSizePopup() {
+  if (textSizePopup) {
+    textSizePopup.classList.toggle('active');
+    updateTextSizePopupUI();
+  }
+}
+
+// 텍스트 크기 팝업 닫기
+function closeTextSizePopup() {
+  if (textSizePopup) {
+    textSizePopup.classList.remove('active');
+  }
+}
+
+// 텍스트 크기 팝업 UI 업데이트
+function updateTextSizePopupUI() {
+  if (textSizePopup) {
+    textSizePopup.querySelectorAll('.popup-item').forEach((item) => {
+      item.classList.remove('active');
+      if (item.dataset.size === currentTextSize) {
+        item.classList.add('active');
+      }
+    });
+  }
+}
+
+// 텍스트 크기 설정
+function setTextSize(size) {
+  currentTextSize = size;
+
+  // 클래스 초기화 후 새 크기 적용
+  memoTextarea.classList.remove('text-small', 'text-medium', 'text-large');
+  memoTextarea.classList.add(`text-${size}`);
+
+  // LocalStorage에 저장
+  localStorage.setItem(TEXT_SIZE_KEY, size);
+}
+
+// 텍스트 크기 불러오기
+function loadTextSize() {
+  const savedSize = localStorage.getItem(TEXT_SIZE_KEY);
+  if (savedSize) {
+    currentTextSize = savedSize;
+    setTextSize(savedSize);
+  }
+}
+
+/* ========================================
+   체크리스트 함수
+   ======================================== */
+
+// 체크리스트 삽입 또는 토글
+function insertChecklist() {
+  const textarea = memoTextarea;
+  const start = textarea.selectionStart;
+  const text = textarea.value;
+
+  // 현재 커서가 있는 줄 찾기
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const lineEnd = text.indexOf('\n', start);
+  const actualLineEnd = lineEnd === -1 ? text.length : lineEnd;
+  const currentLine = text.substring(lineStart, actualLineEnd);
+
+  // 현재 줄에 체크박스가 있는지 확인
+  if (currentLine.includes('☐')) {
+    // 빈 체크박스 → 체크된 체크박스로 변경
+    const newLine = currentLine.replace('☐', '☑');
+    const newText = text.substring(0, lineStart) + newLine + text.substring(actualLineEnd);
+    textarea.value = newText;
+    textarea.setSelectionRange(start, start);
+  } else if (currentLine.includes('☑')) {
+    // 체크된 체크박스 → 빈 체크박스로 변경
+    const newLine = currentLine.replace('☑', '☐');
+    const newText = text.substring(0, lineStart) + newLine + text.substring(actualLineEnd);
+    textarea.value = newText;
+    textarea.setSelectionRange(start, start);
+  } else {
+    // 체크박스가 없으면 새로 삽입
+    const checkbox = '☐ ';
+    const newText = text.substring(0, start) + checkbox + text.substring(start);
+    textarea.value = newText;
+    const newCursorPos = start + checkbox.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+  }
+
+  textarea.focus();
 }
 
 /* ========================================
@@ -388,6 +524,9 @@ function initApp() {
 
   // LocalStorage에서 메모 불러오기
   loadMemos();
+
+  // 텍스트 크기 불러오기
+  loadTextSize();
 
   // 달력 렌더링
   renderCalendar();

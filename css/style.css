@@ -280,6 +280,77 @@ button {
   background-color: var(--color-main);
 }
 
+/* 툴바 버튼 래퍼 (팝업용) */
+.toolbar-btn-wrapper {
+  position: relative;
+}
+
+/* 팝업 메뉴 */
+.popup-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-white);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  margin-bottom: 10px;
+  min-width: 100px;
+  z-index: 100;
+}
+
+.popup-menu.active {
+  display: block;
+}
+
+.popup-menu::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 8px 0 8px;
+  border-style: solid;
+  border-color: var(--color-white) transparent transparent transparent;
+}
+
+.popup-item {
+  display: block;
+  width: 100%;
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.popup-item:hover {
+  background-color: var(--color-sub);
+}
+
+.popup-item.active {
+  color: var(--color-point);
+  font-weight: 600;
+}
+
+/* 텍스트 크기 클래스 */
+.memo-textarea.text-small {
+  font-size: 14px;
+}
+
+.memo-textarea.text-medium {
+  font-size: 16px;
+}
+
+.memo-textarea.text-large {
+  font-size: 20px;
+}
+
 /* ========================================
    반응형 스타일
    ======================================== */
