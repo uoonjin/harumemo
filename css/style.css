@@ -2,21 +2,316 @@
    하루메모 - 스타일시트
    ======================================== */
 
-/* CSS 변수 (색상 관리) */
+/* ========================================
+   CSS 변수 (색상 관리)
+   ======================================== */
 :root {
   --color-main: #FFB5DA;
   --color-sub: #FFF4E6;
   --color-point: #FF6B9D;
   --color-dark-bg: #1E1E1E;
+  --color-text: #333333;
+  --color-text-light: #666666;
+  --color-gray: #E0E0E0;
+  --color-white: #FFFFFF;
 }
 
-/* 기본 스타일 */
+/* ========================================
+   기본 스타일
+   ======================================== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: 'Pretendard', '나눔고딕', '맑은고딕', sans-serif;
+  background-color: var(--color-white);
+  color: var(--color-text);
+  overflow: hidden;
 }
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* ========================================
+   화면 전환
+   ======================================== */
+.screen {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* ========================================
+   메인 화면 (달력)
+   ======================================== */
+#main-screen {
+  background-color: var(--color-white);
+  padding: 20px;
+}
+
+/* 헤더 */
+.main-header {
+  padding: 20px 0 30px;
+}
+
+.month-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* 달력 컨테이너 */
+.calendar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 요일 헤더 */
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  padding-bottom: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* 날짜 그리드 */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  justify-items: center;
+}
+
+/* 날짜 아이템 */
+.day-item {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--color-gray);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.day-item:hover {
+  transform: scale(1.05);
+}
+
+.day-item:active {
+  transform: scale(0.95);
+}
+
+.day-item.empty {
+  background-color: transparent;
+  cursor: default;
+}
+
+.day-item.empty:hover,
+.day-item.empty:active {
+  transform: none;
+}
+
+.day-item.has-memo {
+  background-color: var(--color-main);
+}
+
+.day-item.today {
+  border: 2px solid var(--color-point);
+}
+
+.day-number {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.day-emoji {
+  font-size: 10px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* FAB 버튼 (새 메모 작성) */
+.fab-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: var(--color-text);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.fab-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.fab-button:active {
+  transform: scale(0.95);
+}
+
+/* ========================================
+   메모 작성/수정 화면
+   ======================================== */
+#memo-screen {
+  background-color: var(--color-white);
+}
+
+/* 메모 헤더 */
+.memo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--color-gray);
+}
+
+.header-btn {
+  font-size: 16px;
+  color: var(--color-text);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.header-btn:hover {
+  color: var(--color-point);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#btn-save {
+  color: var(--color-point);
+  font-weight: 600;
+}
+
+/* 메모 입력 영역 */
+.memo-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+}
+
+.memo-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  background-color: var(--color-sub);
+  border-radius: 12px;
+  padding: 20px;
+  color: var(--color-text);
+}
+
+.memo-textarea::placeholder {
+  color: var(--color-text-light);
+}
+
+/* 메모 툴바 */
+.memo-toolbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid var(--color-gray);
+  background-color: var(--color-white);
+}
+
+.toolbar-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  font-size: 18px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.toolbar-btn:hover {
+  background-color: var(--color-sub);
+}
+
+.toolbar-btn:active {
+  background-color: var(--color-main);
+}
+
+/* ========================================
+   반응형 스타일
+   ======================================== */
+@media (max-width: 380px) {
+  .day-item {
+    width: 38px;
+    height: 38px;
+  }
+
+  .day-number {
+    font-size: 11px;
+  }
+
+  .day-emoji {
+    font-size: 9px;
+  }
+
+  .fab-button {
+    width: 54px;
+    height: 54px;
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* ========================================
+   다크모드 (추후 구현)
+   ======================================== */
+/*
+body.dark-mode {
+  --color-text: #FFFFFF;
+  --color-text-light: #AAAAAA;
+  background-color: var(--color-dark-bg);
+}
+*/

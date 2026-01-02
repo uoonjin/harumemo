@@ -2,20 +2,121 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>하루메모</title>
 
   <!-- PWA 설정 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#FFB5DA">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
 
   <!-- 스타일시트 -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- 메인 컨텐츠 -->
-  <main id="app">
-  </main>
+  <!-- ========================================
+       메인 화면 (달력)
+       ======================================== -->
+  <section id="main-screen" class="screen active">
+    <!-- 헤더 -->
+    <header class="main-header">
+      <h1 class="month-title" id="month-title">1월</h1>
+    </header>
+
+    <!-- 달력 -->
+    <div class="calendar-container">
+      <!-- 요일 헤더 -->
+      <div class="weekday-header">
+        <span>월</span>
+        <span>화</span>
+        <span>수</span>
+        <span>목</span>
+        <span>금</span>
+        <span>토</span>
+        <span>일</span>
+      </div>
+
+      <!-- 날짜 그리드 -->
+      <div class="calendar-grid" id="calendar-grid">
+        <!-- JavaScript로 동적 생성 -->
+      </div>
+    </div>
+
+    <!-- 새 메모 작성 버튼 (FAB) -->
+    <button class="fab-button" id="btn-new-memo" aria-label="새 메모 작성">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+    </button>
+  </section>
+
+  <!-- ========================================
+       메모 작성/수정 화면
+       ======================================== -->
+  <section id="memo-screen" class="screen">
+    <!-- 헤더 -->
+    <header class="memo-header">
+      <button class="header-btn" id="btn-back" aria-label="뒤로가기">
+        <span>&lt;뒤로</span>
+      </button>
+      <div class="header-actions">
+        <button class="header-btn" id="btn-share" aria-label="공유">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+            <polyline points="16 6 12 2 8 6"></polyline>
+            <line x1="12" y1="2" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <button class="header-btn" id="btn-save">완료</button>
+      </div>
+    </header>
+
+    <!-- 메모 입력 영역 -->
+    <div class="memo-content">
+      <textarea
+        id="memo-textarea"
+        class="memo-textarea"
+        placeholder="메모내용입력"
+      ></textarea>
+    </div>
+
+    <!-- 하단 툴바 -->
+    <footer class="memo-toolbar">
+      <button class="toolbar-btn" id="btn-text" aria-label="텍스트">
+        <span>가</span>
+      </button>
+      <button class="toolbar-btn" id="btn-checklist" aria-label="체크리스트">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-attach" aria-label="첨부파일">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-draw" aria-label="그리기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+          <path d="M2 2l7.586 7.586"></path>
+        </svg>
+      </button>
+      <button class="toolbar-btn" id="btn-close" aria-label="닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </footer>
+  </section>
+
+  <!-- 숨겨진 파일 입력 (백업 가져오기용) -->
+  <input type="file" id="import-file-input" accept=".json" style="display: none;">
 
   <!-- 스크립트 -->
   <script src="js/app.js"></script>
