@@ -4,7 +4,7 @@
    ======================================== */
 
 // 캐시 이름 (버전 변경 시 숫자 증가)
-const CACHE_NAME = 'harumemo-v14';
+const CACHE_NAME = 'harumemo-v17';
 
 // 캐시할 파일 목록
 const CACHE_FILES = [

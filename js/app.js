@@ -901,7 +901,7 @@ function saveDrawing() {
    백업 관리 함수
    ======================================== */
 
-// 메모 내보내기 (Export)
+// 메모 내보내기 (Export) - 브라우저 인쇄 기능 (PDF로 저장 가능)
 function exportMemos() {
   // 메모가 없으면 알림
   if (Object.keys(memos).length === 0) {
@@ -910,35 +910,117 @@ function exportMemos() {
   }
 
   try {
-    // JSON 문자열로 변환
-    const jsonData = JSON.stringify(memos, null, 2);
+    // 날짜순으로 정렬
+    const sortedDates = Object.keys(memos).sort();
 
-    // Blob 생성
-    const blob = new Blob([jsonData], { type: 'application/json' });
+    // 인쇄용 HTML 생성
+    let printContent = `
+      <!DOCTYPE html>
+      <html lang="ko">
+      <head>
+        <meta charset="UTF-8">
+        <title>하루메모</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
+            padding: 40px;
+            color: #333;
+          }
+          h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #FF6B9D;
+          }
+          .memo {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            page-break-inside: avoid;
+          }
+          .memo:last-child { border-bottom: none; }
+          .date {
+            font-weight: bold;
+            font-size: 14px;
+            color: #FF6B9D;
+            margin-bottom: 10px;
+          }
+          .content {
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-break: break-word;
+          }
+          .images { margin-top: 15px; }
+          .images img {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 5px 0;
+            border-radius: 8px;
+          }
+          @media print {
+            body { padding: 20px; }
+            .memo { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>하루메모</h1>
+    `;
 
-    // 다운로드 링크 생성
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    sortedDates.forEach((date) => {
+      const memo = memos[date];
+      const [year, month, day] = date.split('-');
+      const dateTitle = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
 
-    // 파일명에 날짜 포함
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    link.download = `하루메모_백업_${dateStr}.json`;
-    link.href = url;
+      printContent += `
+        <div class="memo">
+          <div class="date">${dateTitle}</div>
+          <div class="content">${escapeHtml(memo.content) || '(내용 없음)'}</div>
+      `;
 
-    // 다운로드 실행
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // 이미지 추가
+      if (memo.images && memo.images.length > 0) {
+        printContent += '<div class="images">';
+        memo.images.forEach((imgData) => {
+          printContent += `<img src="${imgData}" alt="첨부 이미지">`;
+        });
+        printContent += '</div>';
+      }
 
-    // URL 해제
-    URL.revokeObjectURL(url);
+      printContent += '</div>';
+    });
 
-    alert(`${Object.keys(memos).length}개의 메모를 내보냈습니다.`);
+    printContent += '</body></html>';
+
+    // 새 창에서 인쇄
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    // 이미지 로딩 후 인쇄
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
+
   } catch (error) {
     console.error('내보내기 실패:', error);
     alert('메모 내보내기에 실패했습니다.');
   }
+}
+
+// HTML 특수문자 이스케이프
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // 메모 가져오기 (Import) - 파일 선택 창 열기
@@ -949,7 +1031,7 @@ function openImportDialog() {
   }
 }
 
-// 메모 가져오기 (Import) - 파일 처리
+// 메모 가져오기 (Import) - 파일 처리 (TXT 형식)
 function importMemos(event) {
   const file = event.target.files[0];
 
@@ -958,9 +1040,9 @@ function importMemos(event) {
     return;
   }
 
-  // JSON 파일 형식 검증
-  if (!file.name.endsWith('.json')) {
-    alert('JSON 파일만 가져올 수 있습니다.');
+  // TXT 파일 형식 검증
+  if (!file.name.endsWith('.txt')) {
+    alert('TXT 파일만 가져올 수 있습니다.');
     event.target.value = ''; // 입력 초기화
     return;
   }
@@ -977,32 +1059,45 @@ function importMemos(event) {
 
   reader.onload = function(e) {
     try {
-      // JSON 파싱
-      const importedData = JSON.parse(e.target.result);
+      const txtContent = e.target.result;
 
-      // 데이터 형식 검증
-      if (typeof importedData !== 'object' || importedData === null) {
-        throw new Error('잘못된 데이터 형식');
-      }
+      // TXT 파싱: "=== YYYY년 M월 D일 ===" 패턴으로 분리
+      const memoBlocks = txtContent.split(/===\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*===/);
 
       // 가져온 메모 수 카운트
       let importCount = 0;
 
-      // 기존 메모에 병합
-      for (const date in importedData) {
-        const memo = importedData[date];
+      // memoBlocks[0]은 첫 구분자 앞의 빈 문자열
+      // 이후로 [year, month, day, content, year, month, day, content, ...] 형태
+      for (let i = 1; i < memoBlocks.length; i += 4) {
+        const year = memoBlocks[i];
+        const month = memoBlocks[i + 1];
+        const day = memoBlocks[i + 2];
+        let content = memoBlocks[i + 3] || '';
 
-        // 메모 데이터 유효성 검사
-        if (memo && typeof memo.content === 'string') {
-          memos[date] = {
-            id: date,
-            content: memo.content,
-            emoji: memo.emoji || '',
-            createdAt: memo.createdAt || new Date().toISOString(),
-            updatedAt: memo.updatedAt || new Date().toISOString()
+        // 내용 정리 (앞뒤 공백 제거, [첨부 이미지] 라인 제거)
+        content = content.trim();
+        content = content.replace(/\[첨부 이미지 \d+개\]\s*/g, '').trim();
+
+        // 날짜 문자열 생성
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        // 메모 저장
+        if (content && content !== '(내용 없음)') {
+          memos[dateStr] = {
+            id: dateStr,
+            content: content,
+            images: [],
+            emoji: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           };
           importCount++;
         }
+      }
+
+      if (importCount === 0) {
+        throw new Error('가져올 메모가 없습니다.');
       }
 
       // LocalStorage에 저장
@@ -1014,7 +1109,7 @@ function importMemos(event) {
       alert(`${importCount}개의 메모를 가져왔습니다.`);
     } catch (error) {
       console.error('가져오기 실패:', error);
-      alert('메모 가져오기에 실패했습니다.\n올바른 백업 파일인지 확인해주세요.');
+      alert('메모 가져오기에 실패했습니다.\n올바른 형식의 파일인지 확인해주세요.');
     }
 
     // 입력 초기화 (같은 파일 다시 선택 가능하게)
