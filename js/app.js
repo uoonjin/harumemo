@@ -26,6 +26,15 @@ let memos = {};
 // 현재 텍스트 크기 (small, medium, large)
 let currentTextSize = 'medium';
 
+// 현재 메모의 이미지 배열
+let currentImages = [];
+
+// 그리기 관련 변수
+let isDrawing = false;
+let drawCtx = null;
+let currentColor = '#333333';
+let isEraser = false;
+
 /* ========================================
    DOM 요소
    ======================================== */
@@ -44,7 +53,21 @@ const btnClose = document.getElementById('btn-close');
 // 툴바 버튼
 const btnText = document.getElementById('btn-text');
 const btnChecklist = document.getElementById('btn-checklist');
+const btnAttach = document.getElementById('btn-attach');
+const btnDraw = document.getElementById('btn-draw');
 const textSizePopup = document.getElementById('text-size-popup');
+
+// 이미지 관련
+const imageFileInput = document.getElementById('image-file-input');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+
+// 그리기 화면
+const drawScreen = document.getElementById('draw-screen');
+const drawCanvas = document.getElementById('draw-canvas');
+const btnDrawCancel = document.getElementById('btn-draw-cancel');
+const btnDrawSave = document.getElementById('btn-draw-save');
+const btnEraser = document.getElementById('btn-eraser');
+const btnClearCanvas = document.getElementById('btn-clear-canvas');
 
 /* ========================================
    LocalStorage 함수
@@ -67,8 +90,8 @@ function loadMemos() {
    ======================================== */
 // Create/Update: 메모 저장
 function saveMemo(date, content) {
-  if (!content.trim()) {
-    // 내용이 비어있으면 메모 삭제
+  // 내용과 이미지가 모두 비어있으면 메모 삭제
+  if (!content.trim() && currentImages.length === 0) {
     deleteMemo(date);
     return;
   }
@@ -78,12 +101,14 @@ function saveMemo(date, content) {
   if (memos[date]) {
     // Update: 기존 메모 수정
     memos[date].content = content;
+    memos[date].images = currentImages;
     memos[date].updatedAt = now;
   } else {
     // Create: 새 메모 생성
     memos[date] = {
       id: date, // 날짜를 ID로 사용
       content: content,
+      images: currentImages,
       emoji: '',
       createdAt: now,
       updatedAt: now
@@ -222,10 +247,15 @@ function openMemoForDate(date) {
   if (memo) {
     // 기존 메모 불러오기
     memoTextarea.value = memo.content;
+    currentImages = memo.images || [];
   } else {
     // 새 메모
     memoTextarea.value = '';
+    currentImages = [];
   }
+
+  // 이미지 미리보기 렌더링
+  renderImagePreviews();
 
   showMemoScreen();
 }
@@ -282,6 +312,62 @@ function initEventListeners() {
       insertChecklist();
     });
   }
+
+  // 첨부파일 버튼
+  if (btnAttach) {
+    btnAttach.addEventListener('click', () => {
+      if (imageFileInput) {
+        imageFileInput.click();
+      }
+    });
+  }
+
+  // 이미지 파일 선택
+  if (imageFileInput) {
+    imageFileInput.addEventListener('change', handleImageSelect);
+  }
+
+  // 그리기 버튼
+  if (btnDraw) {
+    btnDraw.addEventListener('click', () => {
+      showDrawScreen();
+    });
+  }
+
+  // 그리기 취소 버튼
+  if (btnDrawCancel) {
+    btnDrawCancel.addEventListener('click', () => {
+      hideDrawScreen();
+    });
+  }
+
+  // 그리기 저장 버튼
+  if (btnDrawSave) {
+    btnDrawSave.addEventListener('click', () => {
+      saveDrawing();
+    });
+  }
+
+  // 지우개 버튼
+  if (btnEraser) {
+    btnEraser.addEventListener('click', () => {
+      toggleEraser();
+    });
+  }
+
+  // 전체 지우기 버튼
+  if (btnClearCanvas) {
+    btnClearCanvas.addEventListener('click', () => {
+      clearCanvas();
+    });
+  }
+
+  // 색상 선택 버튼
+  document.querySelectorAll('.color-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectColor(btn);
+    });
+  });
 
   // 팝업 외부 클릭 시 닫기
   document.addEventListener('click', (e) => {
@@ -382,6 +468,239 @@ function insertChecklist() {
   }
 
   textarea.focus();
+}
+
+/* ========================================
+   이미지 첨부 함수
+   ======================================== */
+
+// 이미지 파일 선택 처리
+function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 이미지 파일 확인
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 첨부할 수 있습니다.');
+    return;
+  }
+
+  // 파일 크기 제한 (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('이미지 크기는 5MB 이하만 가능합니다.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Base64로 변환된 이미지 추가
+    currentImages.push(e.target.result);
+    renderImagePreviews();
+  };
+  reader.readAsDataURL(file);
+
+  // 입력 초기화
+  event.target.value = '';
+}
+
+// 이미지 미리보기 렌더링
+function renderImagePreviews() {
+  if (!imagePreviewContainer) return;
+
+  imagePreviewContainer.innerHTML = '';
+
+  currentImages.forEach((imageData, index) => {
+    const item = document.createElement('div');
+    item.className = 'image-preview-item';
+
+    const img = document.createElement('img');
+    img.src = imageData;
+    img.alt = '첨부 이미지';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.addEventListener('click', () => {
+      deleteImage(index);
+    });
+
+    item.appendChild(img);
+    item.appendChild(deleteBtn);
+    imagePreviewContainer.appendChild(item);
+  });
+}
+
+// 이미지 삭제
+function deleteImage(index) {
+  currentImages.splice(index, 1);
+  renderImagePreviews();
+}
+
+/* ========================================
+   그리기 함수
+   ======================================== */
+
+// 그리기 화면 표시
+function showDrawScreen() {
+  if (!drawScreen || !drawCanvas) return;
+
+  memoScreen.classList.remove('active');
+  drawScreen.classList.add('active');
+
+  // 캔버스 초기화
+  initCanvas();
+}
+
+// 그리기 화면 숨기기
+function hideDrawScreen() {
+  if (!drawScreen) return;
+
+  drawScreen.classList.remove('active');
+  memoScreen.classList.add('active');
+}
+
+// 캔버스 초기화
+function initCanvas() {
+  if (!drawCanvas) return;
+
+  const container = drawCanvas.parentElement;
+  drawCanvas.width = container.clientWidth;
+  drawCanvas.height = container.clientHeight;
+
+  drawCtx = drawCanvas.getContext('2d');
+  drawCtx.fillStyle = '#FFFFFF';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  drawCtx.lineWidth = 3;
+  drawCtx.strokeStyle = currentColor;
+
+  // 이벤트 리스너 설정
+  drawCanvas.addEventListener('mousedown', startDrawing);
+  drawCanvas.addEventListener('mousemove', draw);
+  drawCanvas.addEventListener('mouseup', stopDrawing);
+  drawCanvas.addEventListener('mouseout', stopDrawing);
+
+  // 터치 이벤트
+  drawCanvas.addEventListener('touchstart', handleTouchStart);
+  drawCanvas.addEventListener('touchmove', handleTouchMove);
+  drawCanvas.addEventListener('touchend', stopDrawing);
+
+  // 지우개 초기화
+  isEraser = false;
+  if (btnEraser) {
+    btnEraser.classList.remove('active');
+  }
+}
+
+// 그리기 시작
+function startDrawing(e) {
+  isDrawing = true;
+  drawCtx.beginPath();
+  drawCtx.moveTo(e.offsetX, e.offsetY);
+}
+
+// 그리기
+function draw(e) {
+  if (!isDrawing) return;
+
+  if (isEraser) {
+    drawCtx.strokeStyle = '#FFFFFF';
+    drawCtx.lineWidth = 20;
+  } else {
+    drawCtx.strokeStyle = currentColor;
+    drawCtx.lineWidth = 3;
+  }
+
+  drawCtx.lineTo(e.offsetX, e.offsetY);
+  drawCtx.stroke();
+}
+
+// 그리기 중지
+function stopDrawing() {
+  isDrawing = false;
+}
+
+// 터치 시작
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = drawCanvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+
+  isDrawing = true;
+  drawCtx.beginPath();
+  drawCtx.moveTo(x, y);
+}
+
+// 터치 이동
+function handleTouchMove(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+
+  const touch = e.touches[0];
+  const rect = drawCanvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+
+  if (isEraser) {
+    drawCtx.strokeStyle = '#FFFFFF';
+    drawCtx.lineWidth = 20;
+  } else {
+    drawCtx.strokeStyle = currentColor;
+    drawCtx.lineWidth = 3;
+  }
+
+  drawCtx.lineTo(x, y);
+  drawCtx.stroke();
+}
+
+// 색상 선택
+function selectColor(btn) {
+  // 지우개 모드 해제
+  isEraser = false;
+  if (btnEraser) {
+    btnEraser.classList.remove('active');
+  }
+
+  // 기존 선택 해제
+  document.querySelectorAll('.color-btn').forEach((b) => {
+    b.classList.remove('active');
+  });
+
+  // 새 색상 선택
+  btn.classList.add('active');
+  currentColor = btn.dataset.color;
+}
+
+// 지우개 토글
+function toggleEraser() {
+  isEraser = !isEraser;
+  if (btnEraser) {
+    btnEraser.classList.toggle('active', isEraser);
+  }
+}
+
+// 캔버스 전체 지우기
+function clearCanvas() {
+  if (!drawCtx || !drawCanvas) return;
+
+  drawCtx.fillStyle = '#FFFFFF';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+}
+
+// 그림 저장
+function saveDrawing() {
+  if (!drawCanvas) return;
+
+  // 캔버스를 이미지로 변환
+  const imageData = drawCanvas.toDataURL('image/png');
+  currentImages.push(imageData);
+
+  // 메모 화면으로 돌아가기
+  hideDrawScreen();
+  renderImagePreviews();
 }
 
 /* ========================================

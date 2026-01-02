@@ -229,11 +229,13 @@ button {
   flex: 1;
   padding: 20px;
   display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .memo-textarea {
-  flex: 1;
   width: 100%;
+  min-height: 150px;
   border: none;
   outline: none;
   font-size: 16px;
@@ -244,6 +246,7 @@ button {
   border-radius: 12px;
   padding: 20px;
   color: var(--color-text);
+  flex-shrink: 0;
 }
 
 .memo-textarea::placeholder {
@@ -349,6 +352,138 @@ button {
 
 .memo-textarea.text-large {
   font-size: 20px;
+}
+
+/* ========================================
+   이미지 미리보기
+   ======================================== */
+.image-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 15px 0;
+}
+
+.image-preview-item {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: var(--color-gray);
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.image-preview-item .delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+}
+
+/* ========================================
+   그리기 화면
+   ======================================== */
+#draw-screen {
+  background-color: var(--color-white);
+}
+
+.draw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--color-gray);
+}
+
+.draw-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-white);
+  overflow: hidden;
+}
+
+#draw-canvas {
+  background-color: var(--color-white);
+  touch-action: none;
+}
+
+.draw-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid var(--color-gray);
+  background-color: var(--color-white);
+}
+
+.color-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.color-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
+}
+
+.color-btn.active {
+  border-color: var(--color-text);
+  transform: scale(1.15);
+}
+
+.draw-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.draw-action-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--color-sub);
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.draw-action-btn:hover {
+  background-color: var(--color-main);
+}
+
+.draw-action-btn.active {
+  background-color: var(--color-point);
+  color: white;
 }
 
 /* ========================================

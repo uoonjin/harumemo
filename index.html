@@ -81,6 +81,10 @@
         class="memo-textarea"
         placeholder="메모내용입력"
       ></textarea>
+      <!-- 이미지 미리보기 영역 -->
+      <div class="image-preview-container" id="image-preview-container">
+        <!-- JavaScript로 동적 생성 -->
+      </div>
     </div>
 
     <!-- 하단 툴바 -->
@@ -125,6 +129,40 @@
 
   <!-- 숨겨진 파일 입력 (백업 가져오기용) -->
   <input type="file" id="import-file-input" accept=".json" style="display: none;">
+
+  <!-- 이미지 첨부용 파일 입력 -->
+  <input type="file" id="image-file-input" accept="image/*" capture="environment" style="display: none;">
+
+  <!-- ========================================
+       그리기 화면 (캔버스)
+       ======================================== -->
+  <section id="draw-screen" class="screen">
+    <!-- 그리기 헤더 -->
+    <header class="draw-header">
+      <button class="header-btn" id="btn-draw-cancel">취소</button>
+      <span class="draw-title">그리기</span>
+      <button class="header-btn" id="btn-draw-save">완료</button>
+    </header>
+
+    <!-- 캔버스 영역 -->
+    <div class="canvas-container">
+      <canvas id="draw-canvas"></canvas>
+    </div>
+
+    <!-- 그리기 툴바 -->
+    <footer class="draw-toolbar">
+      <div class="color-picker">
+        <button class="color-btn active" data-color="#333333" style="background-color: #333333;"></button>
+        <button class="color-btn" data-color="#FF6B6B" style="background-color: #FF6B6B;"></button>
+        <button class="color-btn" data-color="#4ECDC4" style="background-color: #4ECDC4;"></button>
+        <button class="color-btn" data-color="#FFE66D" style="background-color: #FFE66D;"></button>
+      </div>
+      <div class="draw-actions">
+        <button class="draw-action-btn" id="btn-eraser">지우개</button>
+        <button class="draw-action-btn" id="btn-clear-canvas">전체 지우기</button>
+      </div>
+    </footer>
+  </section>
 
   <!-- 스크립트 -->
   <script src="js/app.js"></script>
