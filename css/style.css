@@ -1,0 +1,22 @@
+/* ========================================
+   하루메모 - 스타일시트
+   ======================================== */
+
+/* CSS 변수 (색상 관리) */
+:root {
+  --color-main: #FFB5DA;
+  --color-sub: #FFF4E6;
+  --color-point: #FF6B9D;
+  --color-dark-bg: #1E1E1E;
+}
+
+/* 기본 스타일 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Pretendard', '나눔고딕', '맑은고딕', sans-serif;
+}
