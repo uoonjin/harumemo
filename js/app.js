@@ -9,6 +9,7 @@
    ======================================== */
 const STORAGE_KEY = 'harumemo_data';
 const TEXT_SIZE_KEY = 'harumemo_textsize';
+const DARKMODE_KEY = 'harumemo_darkmode';
 
 /* ========================================
    전역 변수
@@ -34,6 +35,9 @@ let isDrawing = false;
 let drawCtx = null;
 let currentColor = '#333333';
 let isEraser = false;
+
+// 다크모드 상태
+let isDarkMode = false;
 
 /* ========================================
    DOM 요소
@@ -68,6 +72,12 @@ const btnDrawCancel = document.getElementById('btn-draw-cancel');
 const btnDrawSave = document.getElementById('btn-draw-save');
 const btnEraser = document.getElementById('btn-eraser');
 const btnClearCanvas = document.getElementById('btn-clear-canvas');
+
+// 상세보기 화면
+const detailScreen = document.getElementById('detail-screen');
+
+// 더보기 메뉴
+const moreMenu = document.getElementById('more-menu');
 
 /* ========================================
    LocalStorage 함수
@@ -291,7 +301,14 @@ function renderCalendar() {
     // 날짜 클릭 이벤트
     dayItem.addEventListener('click', () => {
       selectedDate = dateStr;
-      openMemoForDate(selectedDate);
+      const clickedMemo = getMemo(dateStr);
+      if (clickedMemo) {
+        // 메모가 있으면 상세보기
+        showDetailScreen(dateStr);
+      } else {
+        // 메모가 없으면 새 메모 작성
+        openMemoForDate(selectedDate);
+      }
     });
 
     calendarGrid.appendChild(dayItem);
@@ -337,13 +354,16 @@ function initEventListeners() {
   // 달력 스와이프 이벤트
   initSwipeEvents();
 
-  // 새 메모 버튼 (FAB)
-  btnNewMemo.addEventListener('click', () => {
-    // 오늘 날짜로 새 메모 작성
-    const today = new Date();
-    selectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    openMemoForDate(selectedDate);
-  });
+  // 새 메모 버튼
+  if (btnNewMemo) {
+    btnNewMemo.addEventListener('click', () => {
+      closeMoreMenu();
+      // 오늘 날짜로 새 메모 작성
+      const today = new Date();
+      selectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      openMemoForDate(selectedDate);
+    });
+  }
 
   // 뒤로가기 버튼
   btnBack.addEventListener('click', showMainScreen);
@@ -452,7 +472,75 @@ function initEventListeners() {
     if (textSizePopup && btnText && !textSizePopup.contains(e.target) && e.target !== btnText) {
       closeTextSizePopup();
     }
+    // 더보기 메뉴 외부 클릭 시 닫기
+    const btnMore = document.getElementById('btn-more');
+    if (moreMenu && btnMore && !moreMenu.contains(e.target) && e.target !== btnMore && !btnMore.contains(e.target)) {
+      closeMoreMenu();
+    }
   });
+
+  // 더보기 메뉴 버튼
+  const btnMore = document.getElementById('btn-more');
+  if (btnMore) {
+    btnMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMoreMenu();
+    });
+  }
+
+  // 메모 내보내기 버튼
+  const btnExport = document.getElementById('btn-export');
+  if (btnExport) {
+    btnExport.addEventListener('click', () => {
+      exportMemos();
+      closeMoreMenu();
+    });
+  }
+
+  // 메모 가져오기 버튼
+  const btnImport = document.getElementById('btn-import');
+  if (btnImport) {
+    btnImport.addEventListener('click', () => {
+      openImportDialog();
+      closeMoreMenu();
+    });
+  }
+
+  // 다크모드 버튼
+  const btnDarkmode = document.getElementById('btn-darkmode');
+  if (btnDarkmode) {
+    btnDarkmode.addEventListener('click', toggleDarkMode);
+  }
+
+  // 상세보기 뒤로가기 버튼
+  const btnDetailBack = document.getElementById('btn-detail-back');
+  if (btnDetailBack) {
+    btnDetailBack.addEventListener('click', hideDetailScreen);
+  }
+
+  // 상세보기 수정 버튼
+  const btnDetailEdit = document.getElementById('btn-detail-edit');
+  if (btnDetailEdit) {
+    btnDetailEdit.addEventListener('click', editFromDetail);
+  }
+
+  // 상세보기 공유 버튼
+  const btnDetailShare = document.getElementById('btn-detail-share');
+  if (btnDetailShare) {
+    btnDetailShare.addEventListener('click', shareFromDetail);
+  }
+
+  // 상세보기 복사 버튼
+  const btnDetailCopy = document.getElementById('btn-detail-copy');
+  if (btnDetailCopy) {
+    btnDetailCopy.addEventListener('click', copyFromDetail);
+  }
+
+  // 상세보기 삭제 버튼
+  const btnDetailDelete = document.getElementById('btn-detail-delete');
+  if (btnDetailDelete) {
+    btnDetailDelete.addEventListener('click', deleteFromDetail);
+  }
 }
 
 /* ========================================
@@ -939,6 +1027,152 @@ function importMemos(event) {
 }
 
 /* ========================================
+   더보기 메뉴 함수
+   ======================================== */
+
+// 더보기 메뉴 토글
+function toggleMoreMenu() {
+  if (moreMenu) {
+    moreMenu.classList.toggle('active');
+  }
+}
+
+// 더보기 메뉴 닫기
+function closeMoreMenu() {
+  if (moreMenu) {
+    moreMenu.classList.remove('active');
+  }
+}
+
+/* ========================================
+   다크모드 함수
+   ======================================== */
+
+// 다크모드 토글
+function toggleDarkMode() {
+  isDarkMode = !isDarkMode;
+  applyDarkMode();
+  saveDarkMode();
+  closeMoreMenu();
+}
+
+// 다크모드 적용
+function applyDarkMode() {
+  if (isDarkMode) {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+}
+
+// 다크모드 저장
+function saveDarkMode() {
+  localStorage.setItem(DARKMODE_KEY, isDarkMode ? 'true' : 'false');
+}
+
+// 다크모드 불러오기
+function loadDarkMode() {
+  const saved = localStorage.getItem(DARKMODE_KEY);
+  isDarkMode = saved === 'true';
+  applyDarkMode();
+}
+
+/* ========================================
+   상세보기 함수
+   ======================================== */
+
+// 상세보기 화면 표시
+function showDetailScreen(date) {
+  const memo = getMemo(date);
+  if (!memo) return;
+
+  // 날짜 포맷팅
+  const [year, month, day] = date.split('-');
+  const detailDate = document.getElementById('detail-date');
+  if (detailDate) {
+    detailDate.textContent = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
+  }
+
+  // 메모 내용 표시
+  const detailText = document.getElementById('detail-text');
+  if (detailText) {
+    detailText.textContent = memo.content || '(내용 없음)';
+  }
+
+  // 이미지 표시
+  const detailImages = document.getElementById('detail-images');
+  if (detailImages) {
+    detailImages.innerHTML = '';
+    if (memo.images && memo.images.length > 0) {
+      memo.images.forEach((imgData) => {
+        const img = document.createElement('img');
+        img.src = imgData;
+        img.alt = '첨부 이미지';
+        detailImages.appendChild(img);
+      });
+    }
+  }
+
+  // 화면 전환
+  mainScreen.classList.remove('active');
+  detailScreen.classList.add('active');
+}
+
+// 상세보기 화면 닫기
+function hideDetailScreen() {
+  detailScreen.classList.remove('active');
+  mainScreen.classList.add('active');
+}
+
+// 상세보기에서 수정 화면으로 이동
+function editFromDetail() {
+  detailScreen.classList.remove('active');
+  openMemoForDate(selectedDate);
+}
+
+// 상세보기에서 삭제
+function deleteFromDetail() {
+  if (confirm('이 메모를 삭제하시겠습니까?')) {
+    deleteMemo(selectedDate);
+    hideDetailScreen();
+    renderCalendar();
+  }
+}
+
+// 상세보기에서 공유
+function shareFromDetail() {
+  const memo = getMemo(selectedDate);
+  if (!memo) return;
+
+  if (navigator.share) {
+    navigator.share({
+      title: '하루메모',
+      text: memo.content
+    }).catch(() => {
+      // 공유 취소됨
+    });
+  } else {
+    alert('이 브라우저에서는 공유 기능을 지원하지 않습니다.');
+  }
+}
+
+// 상세보기에서 복사
+function copyFromDetail() {
+  const memo = getMemo(selectedDate);
+  if (!memo) return;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(memo.content).then(() => {
+      alert('메모가 클립보드에 복사되었습니다.');
+    }).catch(() => {
+      alert('복사에 실패했습니다.');
+    });
+  } else {
+    alert('이 브라우저에서는 복사 기능을 지원하지 않습니다.');
+  }
+}
+
+/* ========================================
    앱 초기화
    ======================================== */
 function initApp() {
@@ -949,6 +1183,9 @@ function initApp() {
 
   // 텍스트 크기 불러오기
   loadTextSize();
+
+  // 다크모드 불러오기
+  loadDarkMode();
 
   // 달력 렌더링
   renderCalendar();
