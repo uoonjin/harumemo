@@ -1173,6 +1173,55 @@ function copyFromDetail() {
 }
 
 /* ========================================
+   키보드 대응 (모바일)
+   ======================================== */
+
+// 키보드가 올라올 때 화면 높이 조정
+function initKeyboardHandler() {
+  // visualViewport API 지원 확인
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustForKeyboard);
+    window.visualViewport.addEventListener('scroll', adjustForKeyboard);
+  }
+
+  // textarea 포커스 시 스크롤 조정
+  if (memoTextarea) {
+    memoTextarea.addEventListener('focus', () => {
+      // 약간의 딜레이 후 툴바가 보이도록 스크롤
+      setTimeout(() => {
+        const toolbar = document.querySelector('.memo-toolbar');
+        if (toolbar) {
+          toolbar.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, 300);
+    });
+  }
+}
+
+// 키보드에 맞게 화면 조정
+function adjustForKeyboard() {
+  if (!memoScreen.classList.contains('active')) return;
+
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+
+  // 전체 화면 높이와 비교하여 키보드가 올라왔는지 확인
+  const windowHeight = window.innerHeight;
+  const viewportHeight = viewport.height;
+  const keyboardHeight = windowHeight - viewportHeight;
+
+  if (keyboardHeight > 100) {
+    // 키보드가 올라온 상태
+    memoScreen.style.height = `${viewportHeight}px`;
+    memoScreen.style.transform = `translateY(${viewport.offsetTop}px)`;
+  } else {
+    // 키보드가 내려간 상태
+    memoScreen.style.height = '';
+    memoScreen.style.transform = '';
+  }
+}
+
+/* ========================================
    앱 초기화
    ======================================== */
 function initApp() {
@@ -1192,6 +1241,9 @@ function initApp() {
 
   // 이벤트 리스너 등록
   initEventListeners();
+
+  // 키보드 핸들러 초기화 (모바일 대응)
+  initKeyboardHandler();
 
   // 파일 가져오기 이벤트 리스너
   const fileInput = document.getElementById('import-file-input');
