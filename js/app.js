@@ -339,6 +339,9 @@ function openMemoForDate(date) {
    이벤트 리스너 등록
    ======================================== */
 function initEventListeners() {
+  // 툴바 버튼들이 포커스를 가져가지 않도록 설정 (키보드 유지)
+  preventToolbarFocusLoss();
+
   // 월 이동 버튼
   const btnPrevMonth = document.getElementById('btn-prev-month');
   const btnNextMonth = document.getElementById('btn-next-month');
@@ -1175,6 +1178,61 @@ function copyFromDetail() {
 /* ========================================
    키보드 대응 (모바일)
    ======================================== */
+
+// 툴바 버튼 클릭 시 포커스 손실 방지 (키보드가 내려가지 않게)
+function preventToolbarFocusLoss() {
+  const toolbar = document.querySelector('.memo-toolbar');
+  if (!toolbar) return;
+
+  // 툴바 내의 모든 버튼에 대해 mousedown 시 preventDefault (포커스 이동 방지)
+  toolbar.querySelectorAll('.toolbar-btn').forEach((btn) => {
+    // 닫기 버튼(btn-close)은 제외 - 메인으로 돌아가므로
+    if (btn.id === 'btn-close') return;
+
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+
+    // 모바일: 클릭 후 textarea로 포커스 복원
+    btn.addEventListener('click', () => {
+      // 그리기 버튼은 다른 화면으로 이동하므로 제외
+      if (btn.id !== 'btn-draw') {
+        setTimeout(() => {
+          if (memoScreen.classList.contains('active') && memoTextarea) {
+            memoTextarea.focus();
+          }
+        }, 10);
+      }
+    });
+  });
+
+  // 팝업 메뉴 아이템도 동일하게 처리
+  const textSizePopup = document.getElementById('text-size-popup');
+  if (textSizePopup) {
+    textSizePopup.querySelectorAll('.popup-item').forEach((item) => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
+      item.addEventListener('click', () => {
+        setTimeout(() => {
+          if (memoTextarea) {
+            memoTextarea.focus();
+          }
+        }, 10);
+      });
+    });
+  }
+
+  // 툴바 버튼 래퍼도 처리
+  const toolbarWrapper = toolbar.querySelector('.toolbar-btn-wrapper');
+  if (toolbarWrapper) {
+    toolbarWrapper.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.toolbar-btn') || e.target.closest('.popup-item')) {
+        e.preventDefault();
+      }
+    });
+  }
+}
 
 // 키보드가 올라올 때 화면 높이 조정
 function initKeyboardHandler() {
