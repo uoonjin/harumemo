@@ -70,6 +70,9 @@ button {
 
 /* 헤더 */
 .main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 20px 0 30px;
 }
 
@@ -77,6 +80,27 @@ button {
   font-size: 24px;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* 월 이동 버튼 */
+.nav-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  border-radius: 50%;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.nav-btn:hover {
+  background-color: var(--color-sub);
+}
+
+.nav-btn:active {
+  transform: scale(0.95);
+  background-color: var(--color-main);
 }
 
 /* 달력 컨테이너 */

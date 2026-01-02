@@ -163,12 +163,70 @@ function showMemoScreen() {
 }
 
 /* ========================================
+   스와이프 이벤트 함수
+   ======================================== */
+let touchStartX = 0;
+let touchEndX = 0;
+const SWIPE_THRESHOLD = 50; // 스와이프 인식 최소 거리
+
+// 스와이프 이벤트 초기화
+function initSwipeEvents() {
+  const calendarContainer = document.querySelector('.calendar-container');
+
+  if (!calendarContainer) return;
+
+  calendarContainer.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  calendarContainer.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }, { passive: true });
+}
+
+// 스와이프 처리
+function handleSwipe() {
+  const swipeDistance = touchEndX - touchStartX;
+
+  if (Math.abs(swipeDistance) < SWIPE_THRESHOLD) return;
+
+  if (swipeDistance > 0) {
+    // 오른쪽으로 스와이프 → 이전 달
+    goToPrevMonth();
+  } else {
+    // 왼쪽으로 스와이프 → 다음 달
+    goToNextMonth();
+  }
+}
+
+/* ========================================
    달력 렌더링 함수
    ======================================== */
+// 이전 달로 이동
+function goToPrevMonth() {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  renderCalendar();
+}
+
+// 다음 달로 이동
+function goToNextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  renderCalendar();
+}
+
 // 달력 생성
 function renderCalendar() {
-  // 월 제목 업데이트
-  monthTitle.textContent = `${currentMonth + 1}월`;
+  // 월 제목 업데이트 (년도 포함)
+  monthTitle.textContent = `${currentYear}년 ${currentMonth + 1}월`;
 
   // 달력 그리드 초기화
   calendarGrid.innerHTML = '';
@@ -264,6 +322,21 @@ function openMemoForDate(date) {
    이벤트 리스너 등록
    ======================================== */
 function initEventListeners() {
+  // 월 이동 버튼
+  const btnPrevMonth = document.getElementById('btn-prev-month');
+  const btnNextMonth = document.getElementById('btn-next-month');
+
+  if (btnPrevMonth) {
+    btnPrevMonth.addEventListener('click', goToPrevMonth);
+  }
+
+  if (btnNextMonth) {
+    btnNextMonth.addEventListener('click', goToNextMonth);
+  }
+
+  // 달력 스와이프 이벤트
+  initSwipeEvents();
+
   // 새 메모 버튼 (FAB)
   btnNewMemo.addEventListener('click', () => {
     // 오늘 날짜로 새 메모 작성
@@ -311,6 +384,11 @@ function initEventListeners() {
     btnChecklist.addEventListener('click', () => {
       insertChecklist();
     });
+  }
+
+  // 메모 textarea 클릭 이벤트 (체크박스 토글용)
+  if (memoTextarea) {
+    memoTextarea.addEventListener('click', handleCheckboxClick);
   }
 
   // 첨부파일 버튼
@@ -433,7 +511,7 @@ function loadTextSize() {
    체크리스트 함수
    ======================================== */
 
-// 체크리스트 삽입 또는 토글
+// 체크리스트 삽입/삭제 토글 (툴바 버튼용)
 function insertChecklist() {
   const textarea = memoTextarea;
   const start = textarea.selectionStart;
@@ -446,28 +524,53 @@ function insertChecklist() {
   const currentLine = text.substring(lineStart, actualLineEnd);
 
   // 현재 줄에 체크박스가 있는지 확인
-  if (currentLine.includes('☐')) {
-    // 빈 체크박스 → 체크된 체크박스로 변경
-    const newLine = currentLine.replace('☐', '☑');
+  if (currentLine.includes('☐') || currentLine.includes('☑')) {
+    // 체크박스가 있으면 삭제
+    const newLine = currentLine.replace(/[☐☑]\s?/, '');
     const newText = text.substring(0, lineStart) + newLine + text.substring(actualLineEnd);
     textarea.value = newText;
-    textarea.setSelectionRange(start, start);
-  } else if (currentLine.includes('☑')) {
-    // 체크된 체크박스 → 빈 체크박스로 변경
-    const newLine = currentLine.replace('☑', '☐');
-    const newText = text.substring(0, lineStart) + newLine + text.substring(actualLineEnd);
-    textarea.value = newText;
-    textarea.setSelectionRange(start, start);
+    // 커서 위치 조정 (삭제된 문자 수만큼)
+    const removedLength = currentLine.length - newLine.length;
+    const newCursorPos = Math.max(lineStart, start - removedLength);
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
   } else {
-    // 체크박스가 없으면 새로 삽입
+    // 체크박스가 없으면 줄 맨 앞에 삽입
     const checkbox = '☐ ';
-    const newText = text.substring(0, start) + checkbox + text.substring(start);
+    const newText = text.substring(0, lineStart) + checkbox + text.substring(lineStart);
     textarea.value = newText;
     const newCursorPos = start + checkbox.length;
     textarea.setSelectionRange(newCursorPos, newCursorPos);
   }
 
   textarea.focus();
+}
+
+// 체크박스 클릭 시 체크 토글 (textarea 클릭용)
+function handleCheckboxClick(event) {
+  const textarea = memoTextarea;
+  const cursorPos = textarea.selectionStart;
+  const text = textarea.value;
+
+  // 클릭한 위치의 문자 확인
+  const clickedChar = text[cursorPos];
+  const prevChar = cursorPos > 0 ? text[cursorPos - 1] : '';
+
+  let targetPos = -1;
+
+  // 클릭한 문자가 체크박스인지 확인
+  if (clickedChar === '☐' || clickedChar === '☑') {
+    targetPos = cursorPos;
+  } else if (prevChar === '☐' || prevChar === '☑') {
+    targetPos = cursorPos - 1;
+  }
+
+  if (targetPos >= 0) {
+    const targetChar = text[targetPos];
+    const newChar = targetChar === '☐' ? '☑' : '☐';
+    const newText = text.substring(0, targetPos) + newChar + text.substring(targetPos + 1);
+    textarea.value = newText;
+    textarea.setSelectionRange(cursorPos, cursorPos);
+  }
 }
 
 /* ========================================
