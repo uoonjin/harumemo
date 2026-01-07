@@ -103,37 +103,47 @@ function loadMemos() {
    ======================================== */
 // Create/Update: 메모 저장
 function saveMemo(date) {
-  const contentHtml = memoEditor.innerHTML;
-  const contentText = memoEditor.textContent || memoEditor.innerText || '';
+  try {
+    // memoEditor가 없으면 종료
+    if (!memoEditor) {
+      console.error('memoEditor를 찾을 수 없습니다.');
+      return;
+    }
 
-  // 내용과 이미지가 모두 비어있으면 메모 삭제
-  if (!contentText.trim() && currentImages.length === 0) {
-    deleteMemo(date);
-    return;
+    const contentHtml = memoEditor.innerHTML || '';
+    const contentText = memoEditor.textContent || memoEditor.innerText || '';
+
+    // 내용과 이미지가 모두 비어있으면 메모 삭제
+    if (!contentText.trim() && currentImages.length === 0) {
+      deleteMemo(date);
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    if (memos[date]) {
+      // Update: 기존 메모 수정
+      memos[date].content = contentText;
+      memos[date].contentHtml = contentHtml;
+      memos[date].images = currentImages;
+      memos[date].updatedAt = now;
+    } else {
+      // Create: 새 메모 생성
+      memos[date] = {
+        id: date, // 날짜를 ID로 사용
+        content: contentText,
+        contentHtml: contentHtml,
+        images: currentImages,
+        emoji: '',
+        createdAt: now,
+        updatedAt: now
+      };
+    }
+
+    saveMemos();
+  } catch (error) {
+    console.error('메모 저장 중 오류:', error);
   }
-
-  const now = new Date().toISOString();
-
-  if (memos[date]) {
-    // Update: 기존 메모 수정
-    memos[date].content = contentText;
-    memos[date].contentHtml = contentHtml;
-    memos[date].images = currentImages;
-    memos[date].updatedAt = now;
-  } else {
-    // Create: 새 메모 생성
-    memos[date] = {
-      id: date, // 날짜를 ID로 사용
-      content: contentText,
-      contentHtml: contentHtml,
-      images: currentImages,
-      emoji: '',
-      createdAt: now,
-      updatedAt: now
-    };
-  }
-
-  saveMemos();
 }
 
 // Read: 특정 날짜의 메모 읽기
@@ -168,9 +178,15 @@ function getMemoDatesInMonth(year, month) {
    ======================================== */
 // 메인 화면 표시
 function showMainScreen() {
-  memoScreen.classList.remove('active');
-  mainScreen.classList.add('active');
-  renderCalendar(); // 달력 새로고침 (메모 표시 업데이트)
+  try {
+    if (memoScreen) memoScreen.classList.remove('active');
+    if (detailScreen) detailScreen.classList.remove('active');
+    if (drawScreen) drawScreen.classList.remove('active');
+    if (mainScreen) mainScreen.classList.add('active');
+    renderCalendar(); // 달력 새로고침 (메모 표시 업데이트)
+  } catch (error) {
+    console.error('화면 전환 오류:', error);
+  }
 }
 
 // 메모 화면 표시
@@ -388,12 +404,21 @@ function initEventListeners() {
   btnClose.addEventListener('click', showMainScreen);
 
   // 저장 버튼
-  btnSave.addEventListener('click', () => {
-    if (selectedDate) {
-      saveMemo(selectedDate);
-    }
-    showMainScreen();
-  });
+  if (btnSave) {
+    btnSave.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        if (selectedDate) {
+          saveMemo(selectedDate);
+        }
+        showMainScreen();
+      } catch (error) {
+        console.error('저장 버튼 클릭 오류:', error);
+        showMainScreen();
+      }
+    });
+  }
 
   // 텍스트 크기 버튼
   if (btnText) {
