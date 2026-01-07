@@ -282,7 +282,7 @@ button {
   min-height: 0; /* flex 자식이 제대로 스크롤되도록 */
 }
 
-.memo-textarea {
+.memo-editor {
   width: 100%;
   min-height: 150px;
   border: none;
@@ -290,16 +290,24 @@ button {
   font-size: 16px;
   font-family: inherit;
   line-height: 1.6;
-  resize: none;
   background-color: var(--color-sub);
   border-radius: 12px;
   padding: 20px;
   color: var(--color-text);
   flex-shrink: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.memo-textarea::placeholder {
+.memo-editor:empty::before {
+  content: attr(data-placeholder);
   color: var(--color-text-light);
+  pointer-events: none;
+}
+
+.memo-editor:focus {
+  outline: none;
 }
 
 /* 메모 툴바 */
@@ -396,16 +404,30 @@ button {
 }
 
 /* 텍스트 크기 클래스 */
-.memo-textarea.text-small {
+.memo-editor.text-small {
   font-size: 14px;
 }
 
-.memo-textarea.text-medium {
+.memo-editor.text-medium {
   font-size: 16px;
 }
 
-.memo-textarea.text-large {
+.memo-editor.text-large {
   font-size: 20px;
+}
+
+/* 색상 선택 팝업 아이템 */
+.color-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ========================================

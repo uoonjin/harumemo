@@ -46,7 +46,7 @@ const mainScreen = document.getElementById('main-screen');
 const memoScreen = document.getElementById('memo-screen');
 const monthTitle = document.getElementById('month-title');
 const calendarGrid = document.getElementById('calendar-grid');
-const memoTextarea = document.getElementById('memo-textarea');
+const memoEditor = document.getElementById('memo-editor');
 
 // 버튼
 const btnNewMemo = document.getElementById('btn-new-memo');
@@ -56,10 +56,13 @@ const btnClose = document.getElementById('btn-close');
 
 // 툴바 버튼
 const btnText = document.getElementById('btn-text');
+const btnColor = document.getElementById('btn-color');
+const btnBold = document.getElementById('btn-bold');
 const btnChecklist = document.getElementById('btn-checklist');
 const btnAttach = document.getElementById('btn-attach');
 const btnDraw = document.getElementById('btn-draw');
 const textSizePopup = document.getElementById('text-size-popup');
+const textColorPopup = document.getElementById('text-color-popup');
 
 // 이미지 관련
 const imageFileInput = document.getElementById('image-file-input');
@@ -99,9 +102,12 @@ function loadMemos() {
    CRUD 함수
    ======================================== */
 // Create/Update: 메모 저장
-function saveMemo(date, content) {
+function saveMemo(date) {
+  const contentHtml = memoEditor.innerHTML;
+  const contentText = memoEditor.textContent || memoEditor.innerText || '';
+
   // 내용과 이미지가 모두 비어있으면 메모 삭제
-  if (!content.trim() && currentImages.length === 0) {
+  if (!contentText.trim() && currentImages.length === 0) {
     deleteMemo(date);
     return;
   }
@@ -110,14 +116,16 @@ function saveMemo(date, content) {
 
   if (memos[date]) {
     // Update: 기존 메모 수정
-    memos[date].content = content;
+    memos[date].content = contentText;
+    memos[date].contentHtml = contentHtml;
     memos[date].images = currentImages;
     memos[date].updatedAt = now;
   } else {
     // Create: 새 메모 생성
     memos[date] = {
       id: date, // 날짜를 ID로 사용
-      content: content,
+      content: contentText,
+      contentHtml: contentHtml,
       images: currentImages,
       emoji: '',
       createdAt: now,
@@ -169,7 +177,7 @@ function showMainScreen() {
 function showMemoScreen() {
   mainScreen.classList.remove('active');
   memoScreen.classList.add('active');
-  memoTextarea.focus();
+  memoEditor.focus();
 }
 
 /* ========================================
@@ -320,12 +328,17 @@ function openMemoForDate(date) {
   const memo = getMemo(date);
 
   if (memo) {
-    // 기존 메모 불러오기
-    memoTextarea.value = memo.content;
+    // 기존 메모 불러오기 (HTML 형식 지원)
+    if (memo.contentHtml) {
+      memoEditor.innerHTML = memo.contentHtml;
+    } else {
+      // 이전 버전 호환: 텍스트만 있는 경우
+      memoEditor.textContent = memo.content || '';
+    }
     currentImages = memo.images || [];
   } else {
     // 새 메모
-    memoTextarea.value = '';
+    memoEditor.innerHTML = '';
     currentImages = [];
   }
 
@@ -377,7 +390,7 @@ function initEventListeners() {
   // 저장 버튼
   btnSave.addEventListener('click', () => {
     if (selectedDate) {
-      saveMemo(selectedDate, memoTextarea.value);
+      saveMemo(selectedDate);
     }
     showMainScreen();
   });
@@ -402,6 +415,34 @@ function initEventListeners() {
     });
   }
 
+  // 글씨 색상 버튼
+  if (btnColor) {
+    btnColor.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTextColorPopup();
+    });
+  }
+
+  // 글씨 색상 팝업 아이템 클릭
+  if (textColorPopup) {
+    textColorPopup.querySelectorAll('.popup-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const color = item.dataset.color;
+        applyTextColor(color);
+        closeTextColorPopup();
+      });
+    });
+  }
+
+  // 글씨 굵기 버튼 (토글)
+  if (btnBold) {
+    btnBold.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBold();
+    });
+  }
+
   // 체크리스트 버튼
   if (btnChecklist) {
     btnChecklist.addEventListener('click', () => {
@@ -409,9 +450,9 @@ function initEventListeners() {
     });
   }
 
-  // 메모 textarea 클릭 이벤트 (체크박스 토글용)
-  if (memoTextarea) {
-    memoTextarea.addEventListener('click', handleCheckboxClick);
+  // 메모 에디터 클릭 이벤트 (체크박스 토글용)
+  if (memoEditor) {
+    memoEditor.addEventListener('click', handleCheckboxClick);
   }
 
   // 첨부파일 버튼
@@ -472,8 +513,13 @@ function initEventListeners() {
 
   // 팝업 외부 클릭 시 닫기
   document.addEventListener('click', (e) => {
+    // 텍스트 크기 팝업
     if (textSizePopup && btnText && !textSizePopup.contains(e.target) && e.target !== btnText) {
       closeTextSizePopup();
+    }
+    // 글씨 색상 팝업
+    if (textColorPopup && btnColor && !textColorPopup.contains(e.target) && e.target !== btnColor && !btnColor.contains(e.target)) {
+      closeTextColorPopup();
     }
     // 더보기 메뉴 외부 클릭 시 닫기
     const btnMore = document.getElementById('btn-more');
@@ -553,6 +599,8 @@ function initEventListeners() {
 // 텍스트 크기 팝업 토글
 function toggleTextSizePopup() {
   if (textSizePopup) {
+    // 다른 팝업들 닫기
+    closeTextColorPopup();
     textSizePopup.classList.toggle('active');
     updateTextSizePopupUI();
   }
@@ -582,8 +630,8 @@ function setTextSize(size) {
   currentTextSize = size;
 
   // 클래스 초기화 후 새 크기 적용
-  memoTextarea.classList.remove('text-small', 'text-medium', 'text-large');
-  memoTextarea.classList.add(`text-${size}`);
+  memoEditor.classList.remove('text-small', 'text-medium', 'text-large');
+  memoEditor.classList.add(`text-${size}`);
 
   // LocalStorage에 저장
   localStorage.setItem(TEXT_SIZE_KEY, size);
@@ -599,68 +647,125 @@ function loadTextSize() {
 }
 
 /* ========================================
+   텍스트 색상 조절 함수 (선택 영역 적용)
+   ======================================== */
+
+// 텍스트 색상 팝업 토글
+function toggleTextColorPopup() {
+  if (textColorPopup) {
+    // 다른 팝업들 닫기
+    closeTextSizePopup();
+    textColorPopup.classList.toggle('active');
+  }
+}
+
+// 텍스트 색상 팝업 닫기
+function closeTextColorPopup() {
+  if (textColorPopup) {
+    textColorPopup.classList.remove('active');
+  }
+}
+
+// 선택 영역에 색상 적용
+function applyTextColor(color) {
+  const colorMap = {
+    default: '',
+    red: '#FF4444',
+    blue: '#4488FF',
+    green: '#44AA44',
+    purple: '#AA44AA'
+  };
+
+  const colorValue = colorMap[color];
+
+  // 선택 영역 확인
+  const selection = window.getSelection();
+  if (!selection.rangeCount || selection.isCollapsed) {
+    return; // 선택 없으면 아무것도 하지 않음
+  }
+
+  // 선택이 memoEditor 내부인지 확인
+  if (!memoEditor.contains(selection.anchorNode)) {
+    return;
+  }
+
+  if (color === 'default') {
+    // 기본 색상: 색상 제거 (span 제거)
+    document.execCommand('removeFormat', false, null);
+  } else {
+    // 색상 적용
+    document.execCommand('foreColor', false, colorValue);
+  }
+
+  // 에디터에 포커스 유지
+  memoEditor.focus();
+}
+
+/* ========================================
+   텍스트 굵기 조절 함수 (토글 방식)
+   ======================================== */
+
+// 굵기 토글 (선택 영역에 적용)
+function toggleBold() {
+  // 선택 영역 확인
+  const selection = window.getSelection();
+  if (!selection.rangeCount || selection.isCollapsed) {
+    return; // 선택 없으면 아무것도 하지 않음
+  }
+
+  // 선택이 memoEditor 내부인지 확인
+  if (!memoEditor.contains(selection.anchorNode)) {
+    return;
+  }
+
+  // 굵기 토글
+  document.execCommand('bold', false, null);
+
+  // 에디터에 포커스 유지
+  memoEditor.focus();
+}
+
+/* ========================================
    체크리스트 함수
    ======================================== */
 
-// 체크리스트 삽입/삭제 토글 (툴바 버튼용)
+// 체크리스트 삽입 (contenteditable용)
 function insertChecklist() {
-  const textarea = memoTextarea;
-  const start = textarea.selectionStart;
-  const text = textarea.value;
-
-  // 현재 커서가 있는 줄 찾기
-  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-  const lineEnd = text.indexOf('\n', start);
-  const actualLineEnd = lineEnd === -1 ? text.length : lineEnd;
-  const currentLine = text.substring(lineStart, actualLineEnd);
-
-  // 현재 줄에 체크박스가 있는지 확인
-  if (currentLine.includes('☐') || currentLine.includes('☑')) {
-    // 체크박스가 있으면 삭제
-    const newLine = currentLine.replace(/[☐☑]\s?/, '');
-    const newText = text.substring(0, lineStart) + newLine + text.substring(actualLineEnd);
-    textarea.value = newText;
-    // 커서 위치 조정 (삭제된 문자 수만큼)
-    const removedLength = currentLine.length - newLine.length;
-    const newCursorPos = Math.max(lineStart, start - removedLength);
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-  } else {
-    // 체크박스가 없으면 줄 맨 앞에 삽입
-    const checkbox = '☐ ';
-    const newText = text.substring(0, lineStart) + checkbox + text.substring(lineStart);
-    textarea.value = newText;
-    const newCursorPos = start + checkbox.length;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-  }
-
-  textarea.focus();
+  // 커서 위치에 체크박스 삽입
+  const checkbox = '☐ ';
+  document.execCommand('insertText', false, checkbox);
+  memoEditor.focus();
 }
 
-// 체크박스 클릭 시 체크 토글 (textarea 클릭용)
+// 체크박스 클릭 시 체크 토글 (contenteditable용)
 function handleCheckboxClick(event) {
-  const textarea = memoTextarea;
-  const cursorPos = textarea.selectionStart;
-  const text = textarea.value;
+  const target = event.target;
 
-  // 클릭한 위치의 문자 확인
-  const clickedChar = text[cursorPos];
-  const prevChar = cursorPos > 0 ? text[cursorPos - 1] : '';
+  // 클릭한 텍스트 노드에서 체크박스 찾기
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
 
-  let targetPos = -1;
+  const range = selection.getRangeAt(0);
+  const textNode = range.startContainer;
 
-  // 클릭한 문자가 체크박스인지 확인
-  if (clickedChar === '☐' || clickedChar === '☑') {
-    targetPos = cursorPos;
-  } else if (prevChar === '☐' || prevChar === '☑') {
-    targetPos = cursorPos - 1;
-  }
+  if (textNode.nodeType !== Node.TEXT_NODE) return;
 
-  if (targetPos >= 0) {
-    const targetChar = text[targetPos];
-    const newChar = targetChar === '☐' ? '☑' : '☐';
-    const newText = text.substring(0, targetPos) + newChar + text.substring(targetPos + 1);
-    textarea.value = newText;
-    textarea.setSelectionRange(cursorPos, cursorPos);
+  const text = textNode.textContent;
+  const offset = range.startOffset;
+
+  // 클릭 위치 근처에서 체크박스 찾기
+  for (let i = Math.max(0, offset - 1); i <= Math.min(text.length - 1, offset); i++) {
+    if (text[i] === '☐' || text[i] === '☑') {
+      const newChar = text[i] === '☐' ? '☑' : '☐';
+      textNode.textContent = text.substring(0, i) + newChar + text.substring(i + 1);
+      // 커서 위치 복원
+      const newRange = document.createRange();
+      newRange.setStart(textNode, offset);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+      break;
+    }
   }
 }
 
@@ -1191,10 +1296,14 @@ function showDetailScreen(date) {
     detailDate.textContent = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
   }
 
-  // 메모 내용 표시
+  // 메모 내용 표시 (HTML 지원)
   const detailText = document.getElementById('detail-text');
   if (detailText) {
-    detailText.textContent = memo.content || '(내용 없음)';
+    if (memo.contentHtml) {
+      detailText.innerHTML = memo.contentHtml;
+    } else {
+      detailText.textContent = memo.content || '(내용 없음)';
+    }
   }
 
   // 이미지 표시
@@ -1293,8 +1402,8 @@ function preventToolbarFocusLoss() {
       // 그리기 버튼은 다른 화면으로 이동하므로 제외
       if (btn.id !== 'btn-draw') {
         setTimeout(() => {
-          if (memoScreen.classList.contains('active') && memoTextarea) {
-            memoTextarea.focus();
+          if (memoScreen.classList.contains('active') && memoEditor) {
+            memoEditor.focus();
           }
         }, 10);
       }
@@ -1310,8 +1419,8 @@ function preventToolbarFocusLoss() {
       });
       item.addEventListener('click', () => {
         setTimeout(() => {
-          if (memoTextarea) {
-            memoTextarea.focus();
+          if (memoEditor) {
+            memoEditor.focus();
           }
         }, 10);
       });
@@ -1338,8 +1447,8 @@ function initKeyboardHandler() {
   }
 
   // textarea 포커스 시 스크롤 조정
-  if (memoTextarea) {
-    memoTextarea.addEventListener('focus', () => {
+  if (memoEditor) {
+    memoEditor.addEventListener('focus', () => {
       // 약간의 딜레이 후 툴바가 보이도록 스크롤
       setTimeout(() => {
         const toolbar = document.querySelector('.memo-toolbar');

@@ -113,11 +113,12 @@
 
     <!-- 메모 입력 영역 -->
     <div class="memo-content">
-      <textarea
-        id="memo-textarea"
-        class="memo-textarea"
-        placeholder="메모내용입력"
-      ></textarea>
+      <div
+        id="memo-editor"
+        class="memo-editor"
+        contenteditable="true"
+        data-placeholder="메모내용입력"
+      ></div>
       <!-- 이미지 미리보기 영역 -->
       <div class="image-preview-container" id="image-preview-container">
         <!-- JavaScript로 동적 생성 -->
@@ -127,7 +128,7 @@
     <!-- 하단 툴바 -->
     <footer class="memo-toolbar">
       <div class="toolbar-btn-wrapper">
-        <button class="toolbar-btn" id="btn-text" aria-label="텍스트">
+        <button class="toolbar-btn" id="btn-text" aria-label="텍스트 크기">
           <span>가</span>
         </button>
         <!-- 텍스트 크기 팝업 메뉴 -->
@@ -137,6 +138,27 @@
           <button class="popup-item" data-size="large">크게</button>
         </div>
       </div>
+      <!-- 글씨 색상 버튼 -->
+      <div class="toolbar-btn-wrapper">
+        <button class="toolbar-btn" id="btn-color" aria-label="글씨 색상">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+          </svg>
+        </button>
+        <!-- 색상 선택 팝업 메뉴 -->
+        <div class="popup-menu" id="text-color-popup">
+          <button class="popup-item color-item" data-color="default"><span class="color-dot" style="background:#333333;"></span>기본</button>
+          <button class="popup-item color-item" data-color="red"><span class="color-dot" style="background:#FF4444;"></span>빨강</button>
+          <button class="popup-item color-item" data-color="blue"><span class="color-dot" style="background:#4488FF;"></span>파랑</button>
+          <button class="popup-item color-item" data-color="green"><span class="color-dot" style="background:#44AA44;"></span>초록</button>
+          <button class="popup-item color-item" data-color="purple"><span class="color-dot" style="background:#AA44AA;"></span>보라</button>
+        </div>
+      </div>
+      <!-- 글씨 굵기 버튼 (토글) -->
+      <button class="toolbar-btn" id="btn-bold" aria-label="글씨 굵기">
+        <span style="font-weight: bold;">B</span>
+      </button>
       <button class="toolbar-btn" id="btn-checklist" aria-label="체크리스트">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 11l3 3L22 4"></path>
