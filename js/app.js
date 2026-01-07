@@ -453,6 +453,9 @@ function initEventListeners() {
   // 메모 에디터 클릭 이벤트 (체크박스 토글용)
   if (memoEditor) {
     memoEditor.addEventListener('click', handleCheckboxClick);
+
+    // 엔터 키 이벤트 (체크리스트 자동 생성)
+    memoEditor.addEventListener('keydown', handleEditorKeydown);
   }
 
   // 첨부파일 버튼
@@ -729,12 +732,119 @@ function toggleBold() {
    체크리스트 함수
    ======================================== */
 
-// 체크리스트 삽입 (contenteditable용)
+// 체크리스트 토글 (contenteditable용)
 function insertChecklist() {
-  // 커서 위치에 체크박스 삽입
-  const checkbox = '☐ ';
-  document.execCommand('insertText', false, checkbox);
+  const selection = window.getSelection();
+  if (!selection.rangeCount) {
+    // 선택 없으면 맨 앞에 체크박스 삽입
+    const checkbox = '☐ ';
+    document.execCommand('insertText', false, checkbox);
+    memoEditor.focus();
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  let node = range.startContainer;
+
+  // 텍스트 노드가 아니면 첫 번째 자식 텍스트 노드 찾기
+  if (node.nodeType !== Node.TEXT_NODE) {
+    if (node.firstChild && node.firstChild.nodeType === Node.TEXT_NODE) {
+      node = node.firstChild;
+    } else {
+      // 텍스트 노드가 없으면 체크박스 삽입
+      const checkbox = '☐ ';
+      document.execCommand('insertText', false, checkbox);
+      memoEditor.focus();
+      return;
+    }
+  }
+
+  const text = node.textContent;
+  const offset = range.startOffset;
+
+  // 현재 줄의 시작과 끝 찾기
+  let lineStart = text.lastIndexOf('\n', offset - 1) + 1;
+  let lineEnd = text.indexOf('\n', offset);
+  if (lineEnd === -1) lineEnd = text.length;
+
+  const currentLine = text.substring(lineStart, lineEnd);
+
+  // 현재 줄에 체크박스가 있는지 확인
+  if (currentLine.includes('☐') || currentLine.includes('☑')) {
+    // 체크박스 제거
+    const newLine = currentLine.replace(/[☐☑]\s?/, '');
+    const newText = text.substring(0, lineStart) + newLine + text.substring(lineEnd);
+    node.textContent = newText;
+
+    // 커서 위치 조정
+    const removedLength = currentLine.length - newLine.length;
+    const newOffset = Math.max(lineStart, offset - removedLength);
+    const newRange = document.createRange();
+    newRange.setStart(node, Math.min(newOffset, newText.length));
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  } else {
+    // 줄 맨 앞에 체크박스 삽입
+    const checkbox = '☐ ';
+    const newText = text.substring(0, lineStart) + checkbox + text.substring(lineStart);
+    node.textContent = newText;
+
+    // 커서 위치 조정
+    const newOffset = offset + checkbox.length;
+    const newRange = document.createRange();
+    newRange.setStart(node, Math.min(newOffset, newText.length));
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  }
+
   memoEditor.focus();
+}
+
+// 에디터 키다운 이벤트 (엔터 시 체크리스트 자동 생성)
+function handleEditorKeydown(event) {
+  // 엔터 키가 아니면 무시
+  if (event.key !== 'Enter') return;
+
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+
+  const range = selection.getRangeAt(0);
+  let node = range.startContainer;
+
+  // 텍스트 노드가 아니면 무시
+  if (node.nodeType !== Node.TEXT_NODE) {
+    return;
+  }
+
+  const text = node.textContent;
+  const offset = range.startOffset;
+
+  // 현재 줄의 시작과 끝 찾기
+  let lineStart = text.lastIndexOf('\n', offset - 1) + 1;
+  let lineEnd = text.indexOf('\n', offset);
+  if (lineEnd === -1) lineEnd = text.length;
+
+  const currentLine = text.substring(lineStart, lineEnd);
+
+  // 현재 줄에 체크박스가 있는지 확인
+  const hasCheckbox = currentLine.includes('☐') || currentLine.includes('☑');
+
+  if (!hasCheckbox) {
+    // 체크박스가 없으면 기본 엔터 동작
+    return;
+  }
+
+  // 현재 줄이 체크박스만 있으면 (내용 없으면) 기본 엔터
+  const lineContent = currentLine.replace(/[☐☑]\s?/, '').trim();
+  if (lineContent === '') {
+    return;
+  }
+
+  // 다음 줄에 체크박스 자동 삽입
+  event.preventDefault();
+  document.execCommand('insertText', false, '\n☐ ');
 }
 
 // 체크박스 클릭 시 체크 토글 (contenteditable용)
