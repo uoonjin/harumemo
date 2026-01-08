@@ -103,6 +103,96 @@ button {
   background-color: var(--color-main);
 }
 
+/* ========================================
+   검색 및 필터 영역
+   ======================================== */
+.search-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 15px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-light);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 36px;
+  border: 1px solid var(--color-gray);
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: var(--color-white);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--color-point);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-light);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-light);
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.search-clear-btn.visible {
+  display: flex;
+}
+
+.search-clear-btn:hover {
+  background-color: var(--color-sub);
+}
+
+.filter-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text-light);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.filter-btn:hover {
+  background-color: var(--color-sub);
+}
+
+.filter-btn.active {
+  color: var(--color-point);
+  background-color: rgba(255, 107, 157, 0.1);
+}
+
+.filter-btn.active svg {
+  fill: var(--color-point);
+}
+
 /* 달력 컨테이너 */
 .calendar-container {
   flex: 1;
@@ -134,13 +224,14 @@ button {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: var(--color-gray);
+  background-color: white;
+  border: 1px solid var(--color-gray);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
 }
 
 .day-item:hover {
@@ -153,6 +244,7 @@ button {
 
 .day-item.empty {
   background-color: transparent;
+  border: none;
   cursor: default;
 }
 
@@ -165,8 +257,41 @@ button {
   background-color: var(--color-main);
 }
 
+.day-item.important {
+  position: relative;
+}
+
+.day-item.important::after {
+  content: '★';
+  position: absolute;
+  top: 0px;
+  right: 1px;
+  font-size: 10px;
+  color: var(--color-point);
+  line-height: 1;
+}
+
+.day-item.search-match {
+  border: 2px solid #ffc37c;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 195, 124, 0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(255, 195, 124, 0); }
+}
+
+.day-item.faded {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.day-item.faded:hover {
+  transform: none;
+}
+
 .day-item.today {
-  border: 2px solid var(--color-point);
+  border: 2px solid #82eebf;
 }
 
 .day-number {
@@ -191,8 +316,11 @@ button {
 }
 
 .fab-button {
-  width: 60px;
-  height: 60px;
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background-color: var(--color-text);
   color: var(--color-white);
@@ -201,6 +329,7 @@ button {
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 100;
 }
 
 .fab-button:hover {
@@ -655,6 +784,25 @@ button {
   color: var(--color-text);
 }
 
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.important-btn {
+  color: var(--color-text-light);
+  transition: color 0.2s;
+}
+
+.important-btn.active {
+  color: var(--color-point);
+}
+
+.important-btn.active svg {
+  fill: var(--color-point);
+}
+
 .detail-content {
   flex: 1;
   padding: 20px;
@@ -748,4 +896,25 @@ body.dark-mode .memo-textarea {
 
 body.dark-mode #draw-canvas {
   background-color: #2A2A2A;
+}
+
+body.dark-mode .day-item {
+  background-color: #1E1E1E;
+  border-color: #3A3A3A;
+}
+
+body.dark-mode .day-number {
+  color: #AAAAAA;
+}
+
+body.dark-mode .day-item.has-memo {
+  background-color: #8B5A7A;
+}
+
+body.dark-mode .day-item.has-memo .day-number {
+  color: #FFFFFF;
+}
+
+body.dark-mode .day-item.today {
+  border: 2px solid #82eebf;
 }

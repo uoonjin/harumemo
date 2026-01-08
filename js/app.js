@@ -21,6 +21,9 @@ let currentMonth = new Date().getMonth(); // 0-11
 // 현재 선택된 날짜
 let selectedDate = null;
 
+// 상세보기 중인 날짜
+let currentDetailDate = null;
+
 // 메모 데이터 (메모리)
 let memos = {};
 
@@ -38,6 +41,18 @@ let isEraser = false;
 
 // 다크모드 상태
 let isDarkMode = false;
+
+// 중요 메모 필터 상태
+let showOnlyImportant = false;
+
+// 검색 키워드
+let searchKeyword = '';
+
+// 검색 결과 날짜 목록
+let searchMatchDates = [];
+
+// 현재 메모의 중요 상태
+let currentMemoImportant = false;
 
 /* ========================================
    DOM 요소
@@ -126,6 +141,7 @@ function saveMemo(date) {
       memos[date].content = contentText;
       memos[date].contentHtml = contentHtml;
       memos[date].images = currentImages;
+      memos[date].important = currentMemoImportant;
       memos[date].updatedAt = now;
     } else {
       // Create: 새 메모 생성
@@ -135,6 +151,7 @@ function saveMemo(date) {
         contentHtml: contentHtml,
         images: currentImages,
         emoji: '',
+        important: currentMemoImportant, // 중요 메모 여부
         createdAt: now,
         updatedAt: now
       };
@@ -171,6 +188,78 @@ function getMemoDatesInMonth(year, month) {
   }
 
   return dates;
+}
+
+// 해당 월의 중요 메모 날짜 목록
+function getImportantDatesInMonth(year, month) {
+  const dates = [];
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+  for (const date in memos) {
+    if (date.startsWith(prefix) && memos[date].important) {
+      dates.push(parseInt(date.split('-')[2]));
+    }
+  }
+
+  return dates;
+}
+
+// 중요 메모 토글
+function toggleImportant(date) {
+  if (memos[date]) {
+    memos[date].important = !memos[date].important;
+    saveMemos();
+    return memos[date].important;
+  }
+  return false;
+}
+
+// 검색 기능: 메모 검색
+function searchMemos(keyword) {
+  searchKeyword = keyword.trim().toLowerCase();
+  searchMatchDates = [];
+
+  if (!searchKeyword) {
+    renderCalendar();
+    return;
+  }
+
+  // 모든 메모에서 검색
+  for (const date in memos) {
+    const memo = memos[date];
+    const content = (memo.content || '').toLowerCase();
+
+    if (content.includes(searchKeyword)) {
+      searchMatchDates.push(date);
+    }
+  }
+
+  renderCalendar();
+}
+
+// 검색 초기화
+function clearSearch() {
+  searchKeyword = '';
+  searchMatchDates = [];
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  updateSearchClearButton();
+  renderCalendar();
+}
+
+// 검색어 지우기 버튼 표시/숨기기
+function updateSearchClearButton() {
+  const searchInput = document.getElementById('search-input');
+  const clearBtn = document.getElementById('search-clear-btn');
+  if (searchInput && clearBtn) {
+    if (searchInput.value.length > 0) {
+      clearBtn.classList.add('visible');
+    } else {
+      clearBtn.classList.remove('visible');
+    }
+  }
 }
 
 /* ========================================
@@ -269,9 +358,8 @@ function renderCalendar() {
   const firstDay = new Date(currentYear, currentMonth, 1);
   const lastDay = new Date(currentYear, currentMonth + 1, 0);
 
-  // 첫 날의 요일 (월요일 시작: 0=월, 6=일)
-  let startDay = firstDay.getDay() - 1;
-  if (startDay < 0) startDay = 6; // 일요일인 경우
+  // 첫 날의 요일 (일요일 시작: 0=일, 6=토)
+  let startDay = firstDay.getDay();
 
   // 오늘 날짜
   const today = new Date();
@@ -282,6 +370,9 @@ function renderCalendar() {
   // 메모가 있는 날짜 목록
   const memoDates = getMemoDatesInMonth(currentYear, currentMonth);
 
+  // 중요 메모 날짜 목록
+  const importantDates = getImportantDatesInMonth(currentYear, currentMonth);
+
   // 빈 칸 추가 (첫 주)
   for (let i = 0; i < startDay; i++) {
     const emptyDay = document.createElement('div');
@@ -291,6 +382,28 @@ function renderCalendar() {
 
   // 날짜 추가
   for (let day = 1; day <= lastDay.getDate(); day++) {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const memo = getMemo(dateStr);
+
+    // 중요 메모 필터 활성화 시, 중요 메모가 아니면 흐리게 표시
+    const isImportant = importantDates.includes(day);
+    const hasMemo = memoDates.includes(day);
+
+    // 중요 메모 필터 적용
+    if (showOnlyImportant && hasMemo && !isImportant) {
+      // 중요하지 않은 메모는 빈 칸으로 표시
+      const dayItem = document.createElement('div');
+      dayItem.className = 'day-item faded';
+
+      const dayNumber = document.createElement('span');
+      dayNumber.className = 'day-number';
+      dayNumber.textContent = day;
+
+      dayItem.appendChild(dayNumber);
+      calendarGrid.appendChild(dayItem);
+      continue;
+    }
+
     const dayItem = document.createElement('div');
     dayItem.className = 'day-item';
 
@@ -300,8 +413,18 @@ function renderCalendar() {
     }
 
     // 메모가 있는 날짜 표시
-    if (memoDates.includes(day)) {
+    if (hasMemo) {
       dayItem.classList.add('has-memo');
+    }
+
+    // 중요 메모 표시
+    if (isImportant) {
+      dayItem.classList.add('important');
+    }
+
+    // 검색 결과 표시
+    if (searchMatchDates.includes(dateStr)) {
+      dayItem.classList.add('search-match');
     }
 
     // 날짜 번호
@@ -313,8 +436,6 @@ function renderCalendar() {
     const dayEmoji = document.createElement('span');
     dayEmoji.className = 'day-emoji';
 
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const memo = getMemo(dateStr);
     if (memo && memo.emoji) {
       dayEmoji.textContent = memo.emoji;
     }
@@ -352,11 +473,16 @@ function openMemoForDate(date) {
       memoEditor.textContent = memo.content || '';
     }
     currentImages = memo.images || [];
+    currentMemoImportant = memo.important || false;
   } else {
     // 새 메모
     memoEditor.innerHTML = '';
     currentImages = [];
+    currentMemoImportant = false;
   }
+
+  // 중요 표시 버튼 UI 업데이트
+  updateMemoImportantButtonUI();
 
   // 이미지 미리보기 렌더링
   renderImagePreviews();
@@ -584,7 +710,7 @@ function initEventListeners() {
   }
 
   // 다크모드 버튼
-  const btnDarkmode = document.getElementById('btn-darkmode');
+  const btnDarkmode = document.getElementById('btn-darkmode-toggle');
   if (btnDarkmode) {
     btnDarkmode.addEventListener('click', toggleDarkMode);
   }
@@ -617,6 +743,53 @@ function initEventListeners() {
   const btnDetailDelete = document.getElementById('btn-detail-delete');
   if (btnDetailDelete) {
     btnDetailDelete.addEventListener('click', deleteFromDetail);
+  }
+
+  // 상세보기 내보내기 버튼
+  const btnDetailExport = document.getElementById('btn-detail-export');
+  if (btnDetailExport) {
+    btnDetailExport.addEventListener('click', exportSingleMemo);
+  }
+
+  // 상세보기 중요 버튼
+  const btnDetailImportant = document.getElementById('btn-detail-important');
+  if (btnDetailImportant) {
+    btnDetailImportant.addEventListener('click', toggleImportantFromDetail);
+  }
+
+  // 검색 입력창
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    // 입력 시 실시간 검색
+    searchInput.addEventListener('input', (e) => {
+      updateSearchClearButton();
+      searchMemos(e.target.value);
+    });
+
+    // 엔터 키 검색
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        searchMemos(e.target.value);
+      }
+    });
+  }
+
+  // 검색어 지우기 버튼
+  const searchClearBtn = document.getElementById('search-clear-btn');
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', clearSearch);
+  }
+
+  // 중요 메모 필터 버튼
+  const btnFilterImportant = document.getElementById('btn-filter-important');
+  if (btnFilterImportant) {
+    btnFilterImportant.addEventListener('click', toggleImportantFilter);
+  }
+
+  // 메모 작성 화면 중요 버튼
+  const btnMemoImportant = document.getElementById('btn-memo-important');
+  if (btnMemoImportant) {
+    btnMemoImportant.addEventListener('click', toggleMemoImportant);
   }
 }
 
@@ -1159,13 +1332,53 @@ function exportMemos() {
       <html lang="ko">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>하루메모</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
             font-family: 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
-            padding: 40px;
+            padding: 20px;
+            padding-top: 70px;
             color: #333;
+          }
+          .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #FF6B9D;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .toolbar-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+          }
+          .toolbar-buttons {
+            display: flex;
+            gap: 10px;
+          }
+          .toolbar-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .btn-save {
+            background: white;
+            color: #FF6B9D;
+          }
+          .btn-close {
+            background: rgba(255,255,255,0.2);
+            color: white;
           }
           h1 {
             text-align: center;
@@ -1200,12 +1413,20 @@ function exportMemos() {
             border-radius: 8px;
           }
           @media print {
-            body { padding: 20px; }
+            .toolbar { display: none; }
+            body { padding: 20px; padding-top: 20px; }
             .memo { page-break-inside: avoid; }
           }
         </style>
       </head>
       <body>
+        <div class="toolbar">
+          <span class="toolbar-title">미리보기</span>
+          <div class="toolbar-buttons">
+            <button class="toolbar-btn btn-save" onclick="window.print()">저장</button>
+            <button class="toolbar-btn btn-close" onclick="window.close()">닫기</button>
+          </div>
+        </div>
         <h1>하루메모</h1>
     `;
 
@@ -1234,17 +1455,141 @@ function exportMemos() {
 
     printContent += '</body></html>';
 
-    // 새 창에서 인쇄
+    // 새 창에서 미리보기
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
 
-    // 이미지 로딩 후 인쇄
-    printWindow.onload = function() {
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    };
+  } catch (error) {
+    console.error('내보내기 실패:', error);
+    alert('메모 내보내기에 실패했습니다.');
+  }
+}
+
+// 단일 메모 내보내기 (상세보기에서 해당 날짜 메모만)
+function exportSingleMemo() {
+  if (!currentDetailDate) {
+    alert('내보낼 메모가 없습니다.');
+    return;
+  }
+
+  const memo = memos[currentDetailDate];
+  if (!memo) {
+    alert('내보낼 메모가 없습니다.');
+    return;
+  }
+
+  try {
+    const [year, month, day] = currentDetailDate.split('-');
+    const dateTitle = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
+
+    // 인쇄용 HTML 생성
+    let printContent = `
+      <!DOCTYPE html>
+      <html lang="ko">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>하루메모 - ${dateTitle}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
+            padding: 20px;
+            padding-top: 70px;
+            color: #333;
+          }
+          .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #FF6B9D;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .toolbar-title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+          }
+          .toolbar-buttons {
+            display: flex;
+            gap: 10px;
+          }
+          .toolbar-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .btn-save {
+            background: white;
+            color: #FF6B9D;
+          }
+          .btn-close {
+            background: rgba(255,255,255,0.2);
+            color: white;
+          }
+          .date {
+            font-weight: bold;
+            font-size: 18px;
+            color: #FF6B9D;
+            margin-bottom: 20px;
+            text-align: center;
+          }
+          .content {
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-break: break-word;
+          }
+          .images { margin-top: 20px; }
+          .images img {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 10px 0;
+            border-radius: 8px;
+          }
+          @media print {
+            .toolbar { display: none; }
+            body { padding: 20px; padding-top: 20px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="toolbar">
+          <span class="toolbar-title">미리보기</span>
+          <div class="toolbar-buttons">
+            <button class="toolbar-btn btn-save" onclick="window.print()">저장</button>
+            <button class="toolbar-btn btn-close" onclick="window.close()">닫기</button>
+          </div>
+        </div>
+        <div class="date">${dateTitle}</div>
+        <div class="content">${escapeHtml(memo.content) || '(내용 없음)'}</div>
+    `;
+
+    // 이미지 추가
+    if (memo.images && memo.images.length > 0) {
+      printContent += '<div class="images">';
+      memo.images.forEach((imgData) => {
+        printContent += `<img src="${imgData}" alt="첨부 이미지">`;
+      });
+      printContent += '</div>';
+    }
+
+    printContent += '</body></html>';
+
+    // 새 창에서 미리보기
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
 
   } catch (error) {
     console.error('내보내기 실패:', error);
@@ -1424,6 +1769,9 @@ function showDetailScreen(date) {
   const memo = getMemo(date);
   if (!memo) return;
 
+  // 현재 상세보기 날짜 저장
+  currentDetailDate = date;
+
   // 날짜 포맷팅
   const [year, month, day] = date.split('-');
   const detailDate = document.getElementById('detail-date');
@@ -1455,6 +1803,9 @@ function showDetailScreen(date) {
     }
   }
 
+  // 중요 표시 버튼 상태 업데이트
+  updateImportantButtonUI(memo.important || false);
+
   // 화면 전환
   mainScreen.classList.remove('active');
   detailScreen.classList.add('active');
@@ -1482,20 +1833,53 @@ function deleteFromDetail() {
 }
 
 // 상세보기에서 공유
-function shareFromDetail() {
+async function shareFromDetail() {
   const memo = getMemo(selectedDate);
   if (!memo) return;
 
-  if (navigator.share) {
-    navigator.share({
-      title: '하루메모',
-      text: memo.content
-    }).catch(() => {
-      // 공유 취소됨
-    });
-  } else {
+  if (!navigator.share) {
     alert('이 브라우저에서는 공유 기능을 지원하지 않습니다.');
+    return;
   }
+
+  try {
+    // 1. 텍스트 먼저 공유
+    if (memo.content && memo.content.trim()) {
+      await navigator.share({
+        title: '하루메모',
+        text: memo.content
+      });
+    }
+
+    // 2. 이미지가 있으면 이미지도 공유
+    if (memo.images && memo.images.length > 0) {
+      // 이미지 파일 공유 지원 확인
+      if (navigator.canShare) {
+        for (let i = 0; i < memo.images.length; i++) {
+          const imageData = memo.images[i];
+          const file = await base64ToFile(imageData, `image_${i + 1}.png`);
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file]
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    // 공유 취소 또는 오류
+    if (error.name !== 'AbortError') {
+      console.error('공유 오류:', error);
+    }
+  }
+}
+
+// Base64 이미지를 File 객체로 변환
+async function base64ToFile(base64Data, fileName) {
+  const response = await fetch(base64Data);
+  const blob = await response.blob();
+  return new File([blob], fileName, { type: blob.type });
 }
 
 // 상세보기에서 복사
@@ -1511,6 +1895,49 @@ function copyFromDetail() {
     });
   } else {
     alert('이 브라우저에서는 복사 기능을 지원하지 않습니다.');
+  }
+}
+
+// 상세보기에서 중요 표시 토글
+function toggleImportantFromDetail() {
+  if (!currentDetailDate) return;
+
+  const isImportant = toggleImportant(currentDetailDate);
+  updateImportantButtonUI(isImportant);
+}
+
+// 중요 버튼 UI 업데이트
+function updateImportantButtonUI(isImportant) {
+  const btnDetailImportant = document.getElementById('btn-detail-important');
+  if (btnDetailImportant) {
+    if (isImportant) {
+      btnDetailImportant.classList.add('active');
+    } else {
+      btnDetailImportant.classList.remove('active');
+    }
+  }
+}
+
+// 중요 메모 필터 토글 (비활성화됨)
+function toggleImportantFilter() {
+  // 아무 동작도 하지 않음
+}
+
+// 메모 작성 화면에서 중요 표시 토글
+function toggleMemoImportant() {
+  currentMemoImportant = !currentMemoImportant;
+  updateMemoImportantButtonUI();
+}
+
+// 메모 작성 화면 중요 버튼 UI 업데이트
+function updateMemoImportantButtonUI() {
+  const btnMemoImportant = document.getElementById('btn-memo-important');
+  if (btnMemoImportant) {
+    if (currentMemoImportant) {
+      btnMemoImportant.classList.add('active');
+    } else {
+      btnMemoImportant.classList.remove('active');
+    }
   }
 }
 
