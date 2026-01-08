@@ -694,10 +694,15 @@ button {
 /* ========================================
    반응형 스타일
    ======================================== */
-@media (max-width: 380px) {
+/* 아이폰 SE2 등 소형 기기 (375px 이하) */
+@media (max-width: 375px) {
+  .calendar-grid {
+    gap: 4px;
+  }
+
   .day-item {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
   }
 
   .day-number {
@@ -705,14 +710,60 @@ button {
   }
 
   .day-emoji {
-    font-size: 9px;
+    font-size: 8px;
+  }
+
+  .day-item.important::after {
+    font-size: 8px;
+    top: 0px;
+    right: 0px;
   }
 
   .fab-button {
-    width: 54px;
-    height: 54px;
+    width: 50px;
+    height: 50px;
     bottom: 20px;
     right: 20px;
+  }
+
+  .main-header {
+    padding: 15px 0 20px;
+  }
+
+  .month-title {
+    font-size: 20px;
+  }
+
+  .search-filter-bar {
+    padding: 0 0 10px;
+  }
+
+  .search-input {
+    padding: 8px 32px;
+    font-size: 13px;
+  }
+}
+
+/* 더 작은 기기 (320px 이하) */
+@media (max-width: 320px) {
+  .calendar-grid {
+    gap: 2px;
+  }
+
+  .day-item {
+    width: 32px;
+    height: 32px;
+  }
+
+  .day-number {
+    font-size: 10px;
+  }
+
+  .fab-button {
+    width: 46px;
+    height: 46px;
+    bottom: 15px;
+    right: 15px;
   }
 }
 
