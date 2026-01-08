@@ -745,12 +745,6 @@ function initEventListeners() {
     btnDetailDelete.addEventListener('click', deleteFromDetail);
   }
 
-  // 상세보기 내보내기 버튼
-  const btnDetailExport = document.getElementById('btn-detail-export');
-  if (btnDetailExport) {
-    btnDetailExport.addEventListener('click', exportSingleMemo);
-  }
-
   // 상세보기 중요 버튼
   const btnDetailImportant = document.getElementById('btn-detail-important');
   if (btnDetailImportant) {
@@ -1815,6 +1809,7 @@ function showDetailScreen(date) {
 function hideDetailScreen() {
   detailScreen.classList.remove('active');
   mainScreen.classList.add('active');
+  renderCalendar(); // 달력 새로고침 (중요 표시 등 업데이트)
 }
 
 // 상세보기에서 수정 화면으로 이동
